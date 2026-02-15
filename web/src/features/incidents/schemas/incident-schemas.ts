@@ -9,11 +9,15 @@ export const incidentSchema = z.object({
   event_type: z.string(),
   summary: z.string(),
   severity: severitySchema,
-  status: z.enum(["open", "resolved"]),
+  reported_by: z.string().optional().default("unknown"),
+  status: z.enum(["open", "resolved", "cancelled"]),
   metadata: z.record(z.string(), z.unknown()),
   created_at: z.string(),
   updated_at: z.string(),
-  resolved_at: z.string().optional()
+  resolved_at: z.string().optional(),
+  cancelled_at: z.string().optional(),
+  cancel_reason: z.string().optional(),
+  cancelled_by: z.string().optional()
 });
 
 export const incidentsResponseSchema = z.object({
@@ -21,7 +25,7 @@ export const incidentsResponseSchema = z.object({
 });
 
 export const timelineEventSchema = z.object({
-  event_type: z.enum(["created", "deduplicated", "resolved", "auto_resolved"]),
+  event_type: z.enum(["created", "deduplicated", "resolved", "auto_resolved", "cancelled"]),
   incident: incidentSchema,
   occurred_at: z.string()
 });
@@ -32,6 +36,7 @@ export const createIncidentInputSchema = z.object({
   event_type: z.string().min(3).max(128),
   summary: z.string().min(8).max(512),
   severity: severitySchema,
+  reported_by: z.string().min(3).max(320),
   metadata: z.record(z.string(), z.unknown())
 });
 
@@ -41,6 +46,15 @@ export const createIncidentResponseSchema = z.object({
 });
 
 export const resolveIncidentResponseSchema = z.object({
+  incident: incidentSchema
+});
+
+export const cancelIncidentInputSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+  cancelled_by: z.string().trim().min(3).max(320)
+});
+
+export const cancelIncidentResponseSchema = z.object({
   incident: incidentSchema
 });
 
@@ -94,4 +108,6 @@ export type TimelineEvent = z.infer<typeof timelineEventSchema>;
 export type CreateIncidentInput = z.infer<typeof createIncidentInputSchema>;
 export type CreateIncidentResponse = z.infer<typeof createIncidentResponseSchema>;
 export type ResolveIncidentResponse = z.infer<typeof resolveIncidentResponseSchema>;
+export type CancelIncidentInput = z.infer<typeof cancelIncidentInputSchema>;
+export type CancelIncidentResponse = z.infer<typeof cancelIncidentResponseSchema>;
 export type IncidentOverview = z.infer<typeof incidentOverviewSchema>;

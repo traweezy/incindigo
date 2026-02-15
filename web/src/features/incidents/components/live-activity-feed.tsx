@@ -15,6 +15,8 @@ const eventTone = (eventType: TimelineEvent["event_type"]): "critical" | "high" 
     case "resolved":
     case "auto_resolved":
       return "low";
+    case "cancelled":
+      return "critical";
     case "deduplicated":
       return "medium";
     case "created":
@@ -32,6 +34,9 @@ const eventLabel = (eventType: TimelineEvent["event_type"]): string => {
   if (eventType === "resolved") {
     return "Resolved";
   }
+  if (eventType === "cancelled") {
+    return "Cancelled";
+  }
   return "Auto-resolved";
 };
 
@@ -41,6 +46,9 @@ const eventIcon = (eventType: TimelineEvent["event_type"]): FC<{ className?: str
   }
   if (eventType === "auto_resolved") {
     return Bot;
+  }
+  if (eventType === "cancelled") {
+    return CheckCircle2;
   }
   if (eventType === "deduplicated") {
     return Repeat;

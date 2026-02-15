@@ -1,6 +1,14 @@
 import { useForm } from "@tanstack/react-form";
 import { memo, useCallback, useMemo, useState, type FC, type FormEvent } from "react";
 import { z } from "zod";
+import { useAuthSession } from "@/features/auth/lib/auth-session";
+import {
+  incidentEventTypes,
+  incidentRegions,
+  incidentServices,
+  incidentSeverities,
+  incidentSources
+} from "@/features/incidents/lib/incident-taxonomy";
 import { Button } from "@/shared/components/primitives/button";
 import { Field } from "@/shared/components/primitives/field";
 import { Input } from "@/shared/components/primitives/input";
@@ -15,6 +23,7 @@ import {
 type CreateIncidentFormValues = {
   fingerprint: string;
   source: string;
+  reporter: string;
   eventType: string;
   summary: string;
   severity: IncidentSeverity;
@@ -31,6 +40,7 @@ type CreateIncidentFormProps = {
 const fieldSchemas = {
   fingerprint: z.string().trim().min(3, "Fingerprint must be at least 3 characters."),
   source: z.string().trim().min(2, "Source is required."),
+  reporter: z.string().trim().min(3, "Reporter is required."),
   eventType: z.string().trim().min(3, "Event type is required."),
   summary: z.string().trim().min(8, "Summary should be at least 8 characters."),
   host: z.string().trim().optional(),
@@ -47,19 +57,23 @@ const validateField = <T,>(schema: z.ZodType<T>, value: unknown): string | undef
   return parsed.error.issues[0]?.message ?? "Invalid value";
 };
 
-const initialValues: CreateIncidentFormValues = {
-  fingerprint: "",
-  source: "manual-demo",
-  eventType: "http.5xx",
-  summary: "",
-  severity: "high",
-  host: "",
-  region: "",
-  service: ""
-};
-
 const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting, onCreate }) => {
+  const authSession = useAuthSession();
   const [createdIncidentID, setCreatedIncidentID] = useState<string | null>(null);
+
+  const initialValues = useMemo<CreateIncidentFormValues>(() => {
+    return {
+      fingerprint: "",
+      source: "manual-demo",
+      reporter: authSession?.email ?? "oncall@incindigo.dev",
+      eventType: "http.5xx",
+      summary: "",
+      severity: "high",
+      host: "",
+      region: "",
+      service: ""
+    };
+  }, [authSession?.email]);
 
   const form = useForm({
     defaultValues: initialValues,
@@ -70,6 +84,7 @@ const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting
         event_type: value.eventType,
         summary: value.summary,
         severity: value.severity,
+        reported_by: value.reporter,
         metadata: {
           ...(value.host ? { host: value.host } : {}),
           ...(value.region ? { region: value.region } : {}),
@@ -94,46 +109,22 @@ const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting
   );
 
   const severityOptions = useMemo(
-    () =>
-      [
-        { label: "Critical", value: "critical" },
-        { label: "High", value: "high" },
-        { label: "Medium", value: "medium" },
-        { label: "Low", value: "low" }
-      ] as const,
+    () => incidentSeverities.map((value) => ({ label: value, value })),
     []
   );
   const sourceOptions = useMemo(
-    () =>
-      [
-        { label: "Manual Demo", value: "manual-demo" },
-        { label: "PagerDuty", value: "pagerduty" },
-        { label: "Grafana", value: "grafana" },
-        { label: "CloudWatch", value: "cloudwatch" },
-        { label: "Sentry", value: "sentry" }
-      ] as const,
+    () => incidentSources.map((value) => ({ label: value, value })),
     []
   );
   const eventTypeOptions = useMemo(
-    () =>
-      [
-        { label: "HTTP 5xx Spike", value: "http.5xx" },
-        { label: "Database Latency", value: "db.latency" },
-        { label: "CPU High", value: "cpu.high" },
-        { label: "Memory Pressure", value: "memory.pressure" },
-        { label: "Queue Backlog", value: "queue.backlog" },
-        { label: "Disk Space", value: "disk.space" }
-      ] as const,
+    () => incidentEventTypes.map((value) => ({ label: value, value })),
     []
   );
   const regionOptions = useMemo(
     () =>
       [
         { label: "Not set", value: "" },
-        { label: "us-east-1", value: "us-east-1" },
-        { label: "us-west-2", value: "us-west-2" },
-        { label: "eu-west-1", value: "eu-west-1" },
-        { label: "ap-southeast-1", value: "ap-southeast-1" }
+        ...incidentRegions.map((value) => ({ label: value, value }))
       ] as const,
     []
   );
@@ -141,11 +132,7 @@ const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting
     () =>
       [
         { label: "Not set", value: "" },
-        { label: "api", value: "api" },
-        { label: "worker", value: "worker" },
-        { label: "scheduler", value: "scheduler" },
-        { label: "edge", value: "edge" },
-        { label: "billing", value: "billing" }
+        ...incidentServices.map((value) => ({ label: value, value }))
       ] as const,
     []
   );
@@ -165,7 +152,7 @@ const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting
       </header>
 
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <form.Field
             name="fingerprint"
             validators={{
@@ -184,6 +171,31 @@ const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
                     autoComplete="off"
+                    required
+                  />
+                </Field>
+              );
+            }}
+          </form.Field>
+
+          <form.Field
+            name="reporter"
+            validators={{
+              onBlur: ({ value }) => validateField(fieldSchemas.reporter, value)
+            }}
+          >
+            {(field) => {
+              const error = field.state.meta.errors[0] as string | undefined;
+              return (
+                <Field label="Reported By" htmlFor="reporter" error={error}>
+                  <Input
+                    id="reporter"
+                    name={field.name}
+                    placeholder="oncall@incindigo.dev"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </Field>
@@ -270,7 +282,7 @@ const CreateIncidentFormComponent: FC<CreateIncidentFormProps> = ({ isSubmitting
                     {severityOptions.map((option) => {
                       return (
                         <option key={option.value} value={option.value}>
-                          {option.label}
+                          {option.label.charAt(0).toUpperCase() + option.label.slice(1)}
                         </option>
                       );
                     })}

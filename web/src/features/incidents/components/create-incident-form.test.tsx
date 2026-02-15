@@ -20,6 +20,7 @@ describe("CreateIncidentForm", () => {
           event_type: "cpu.high",
           summary: "CPU above threshold",
           severity: "high",
+          reported_by: "oncall@incindigo.dev",
           status: "open",
           metadata: {
             host: "api-1",
@@ -35,6 +36,8 @@ describe("CreateIncidentForm", () => {
     render(<CreateIncidentForm onCreate={onCreate} isSubmitting={false} />);
 
     await user.type(screen.getByLabelText(/Fingerprint/i), "api-cpu");
+    await user.clear(screen.getByLabelText(/Reported By/i));
+    await user.type(screen.getByLabelText(/Reported By/i), "oncall@incindigo.dev");
     await user.selectOptions(screen.getByLabelText(/Source/i), "manual-demo");
     await user.selectOptions(screen.getByLabelText(/Event Type/i), "cpu.high");
     await user.type(screen.getByLabelText(/Summary/i), "CPU above threshold for sustained period");
@@ -54,6 +57,7 @@ describe("CreateIncidentForm", () => {
       source: "manual-demo",
       event_type: "cpu.high",
       severity: "high",
+      reported_by: "oncall@incindigo.dev",
       metadata: {
         host: "api-1",
         region: "us-east-1",

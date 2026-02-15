@@ -25,10 +25,22 @@ const AnalyticsPageComponent: FC = () => {
   const baselineEvents = useMemo<TimelineEvent[]>(() => {
     return incidents.slice(0, 12).map((incident) => {
       const resolvedAt = incident.resolved_at;
+      const cancelledAt = incident.cancelled_at;
+      const eventType =
+        incident.status === "resolved"
+          ? "resolved"
+          : incident.status === "cancelled"
+            ? "cancelled"
+            : "created";
       return {
-        event_type: incident.status === "resolved" ? "resolved" : "created",
+        event_type: eventType,
         incident,
-        occurred_at: incident.status === "resolved" && resolvedAt ? resolvedAt : incident.created_at
+        occurred_at:
+          incident.status === "resolved" && resolvedAt
+            ? resolvedAt
+            : incident.status === "cancelled" && cancelledAt
+              ? cancelledAt
+              : incident.created_at
       };
     });
   }, [incidents]);
@@ -99,13 +111,21 @@ const AnalyticsPageComponent: FC = () => {
                     <Badge tone={incident.severity}>{incident.severity}</Badge>
                     <p
                       className={`inline-flex items-center gap-1.5 text-xs font-medium capitalize ${
-                        incident.status === "resolved" ? "text-emerald-200" : "text-sky-200"
+                        incident.status === "resolved"
+                          ? "text-emerald-200"
+                          : incident.status === "cancelled"
+                            ? "text-amber-200"
+                            : "text-sky-200"
                       }`}
                     >
                       <span
                         aria-hidden="true"
                         className={`size-2 rounded-full ${
-                          incident.status === "resolved" ? "bg-emerald-400" : "bg-sky-400"
+                          incident.status === "resolved"
+                            ? "bg-emerald-400"
+                            : incident.status === "cancelled"
+                              ? "bg-amber-400"
+                              : "bg-sky-400"
                         }`}
                       />
                       {incident.status}

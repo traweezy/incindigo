@@ -1,3 +1,5 @@
+import { getAuthSessionToken } from "@/features/auth/lib/auth-session";
+
 export class HttpError extends Error {
   public readonly status: number;
   public readonly payload: unknown;
@@ -23,6 +25,10 @@ export const fetchJson = async <T>(
   try {
     const headers = new Headers(init?.headers);
     headers.set("Accept", "application/json");
+    const sessionToken = getAuthSessionToken();
+    if (sessionToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${sessionToken}`);
+    }
 
     const response = await fetch(input, {
       ...init,

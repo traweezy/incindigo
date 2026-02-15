@@ -7,22 +7,23 @@ import {
   SlidersHorizontal,
   Sparkles
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState, type FC } from "react";
-import { CreateIncidentForm } from "@/features/incidents/components/create-incident-form";
+import { memo, useCallback, useMemo, useState, type FC } from "react";
+import { toast } from "sonner";
+import { useAuthSession } from "@/features/auth/lib/auth-session";
 import { IncidentCard } from "@/features/incidents/components/incident-card";
 import { IncidentDetailDialog } from "@/features/incidents/components/incident-detail-dialog";
 import { IncidentsGridSkeleton } from "@/features/incidents/components/incidents-grid-skeleton";
-import { useCreateIncident } from "@/features/incidents/hooks/use-create-incident";
+import { useCancelIncident } from "@/features/incidents/hooks/use-cancel-incident";
 import { useIncidentStream } from "@/features/incidents/hooks/use-incident-stream";
 import { useIncidentsQuery } from "@/features/incidents/hooks/use-incidents-query";
 import { useResolveIncident } from "@/features/incidents/hooks/use-resolve-incident";
 import { useSeedIncidents } from "@/features/incidents/hooks/use-seed-incidents";
 import type {
-  CreateIncidentInput,
-  CreateIncidentResponse,
   Incident,
   IncidentSeverity
 } from "@/features/incidents/schemas/incident-schemas";
+import { runbookMatchesIncident } from "@/features/runbooks/lib/runbook-match";
+import { useRunbooksQuery } from "@/features/runbooks/hooks/use-runbooks-query";
 import { Badge } from "@/shared/components/primitives/badge";
 import { Button } from "@/shared/components/primitives/button";
 import { Card } from "@/shared/components/primitives/card";
@@ -33,8 +34,9 @@ import {
   DialogTitle
 } from "@/shared/components/primitives/dialog";
 import { Input } from "@/shared/components/primitives/input";
+import { TextArea } from "@/shared/components/primitives/textarea";
 
-type StatusFilter = "all" | "open" | "resolved";
+type StatusFilter = "all" | "open" | "resolved" | "cancelled";
 type SortOrder = "newest" | "oldest" | "severity";
 type SeverityFilter = "all" | IncidentSeverity;
 type SeedBatchSize = "30" | "60" | "120";
@@ -50,8 +52,10 @@ const openComposerEventName = "incindigo:open-composer";
 
 const IncidentsPageComponent: FC = () => {
   const { data, isPending, isError, error } = useIncidentsQuery();
-  const createIncidentMutation = useCreateIncident();
+  const runbooksQuery = useRunbooksQuery();
+  const authSession = useAuthSession();
   const resolveIncidentMutation = useResolveIncident();
+  const cancelIncidentMutation = useCancelIncident();
   const seedIncidentsMutation = useSeedIncidents();
   const stream = useIncidentStream();
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -59,10 +63,12 @@ const IncidentsPageComponent: FC = () => {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [searchValue, setSearchValue] = useState("");
-  const [isComposerOpen, setComposerOpen] = useState(false);
   const [seedBatchSize, setSeedBatchSize] = useState<SeedBatchSize>("60");
+  const [incidentToCancel, setIncidentToCancel] = useState<Incident | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const incidents = useMemo(() => data ?? [], [data]);
+  const runbooks = useMemo(() => runbooksQuery.data ?? [], [runbooksQuery.data]);
   const normalizedSearch = useMemo(() => searchValue.trim().toLowerCase(), [searchValue]);
 
   const filteredIncidents = useMemo(() => {
@@ -102,11 +108,22 @@ const IncidentsPageComponent: FC = () => {
 
   const counts = useMemo(() => {
     const resolved = incidents.filter((incident) => incident.status === "resolved").length;
+    const cancelled = incidents.filter((incident) => incident.status === "cancelled").length;
     return {
       total: incidents.length,
-      resolved
+      resolved,
+      cancelled
     };
   }, [incidents]);
+
+  const runbookMatchesByIncident = useMemo(() => {
+    const map = new Map<string, typeof runbooks>();
+    for (const incident of incidents) {
+      const matches = runbooks.filter((runbook) => runbookMatchesIncident(runbook, incident));
+      map.set(incident.id, matches);
+    }
+    return map;
+  }, [incidents, runbooks]);
 
   const handleInspectIncident = useCallback((incident: Incident) => {
     setSelectedIncident(incident);
@@ -118,20 +135,24 @@ const IncidentsPageComponent: FC = () => {
     }
   }, []);
 
-  const handleCreateIncident = useCallback(
-    async (input: CreateIncidentInput): Promise<CreateIncidentResponse> => {
-      const response = await createIncidentMutation.mutateAsync(input);
-      setComposerOpen(false);
-      return response;
-    },
-    [createIncidentMutation]
-  );
-
   const handleResolveIncident = useCallback(
     (incidentID: string) => {
       resolveIncidentMutation.mutate(incidentID);
     },
     [resolveIncidentMutation]
+  );
+
+  const handleCancelIncident = useCallback(
+    (incidentID: string) => {
+      const incident = incidents.find((item) => item.id === incidentID);
+      if (!incident) {
+        toast.error("Unable to locate incident");
+        return;
+      }
+      setIncidentToCancel(incident);
+      setCancelReason("False positive");
+    },
+    [incidents]
   );
 
   const handleSeedIncidents = useCallback(() => {
@@ -146,7 +167,7 @@ const IncidentsPageComponent: FC = () => {
   }, []);
 
   const openComposer = useCallback(() => {
-    setComposerOpen(true);
+    window.dispatchEvent(new Event(openComposerEventName));
   }, []);
 
   const scrollToFilters = useCallback(() => {
@@ -164,9 +185,36 @@ const IncidentsPageComponent: FC = () => {
     sortOrder !== "newest" ||
     searchValue !== "";
 
-  const handleComposerOpenChange = useCallback((open: boolean) => {
-    setComposerOpen(open);
+  const handleCancelDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setIncidentToCancel(null);
+      setCancelReason("");
+    }
   }, []);
+
+  const handleConfirmCancel = useCallback(async () => {
+    if (!incidentToCancel) {
+      return;
+    }
+
+    const normalizedReason = cancelReason.trim();
+    if (normalizedReason.length < 3) {
+      toast.error("Cancellation reason must be at least 3 characters.");
+      return;
+    }
+
+    try {
+      await cancelIncidentMutation.mutateAsync({
+        incidentID: incidentToCancel.id,
+        reason: normalizedReason,
+        cancelledBy: authSession?.email ?? "operator@incindigo.dev"
+      });
+      setIncidentToCancel(null);
+      setCancelReason("");
+    } catch {
+      // handled by mutation onError
+    }
+  }, [authSession, cancelIncidentMutation, cancelReason, incidentToCancel]);
 
   const streamStatus = useMemo(() => {
     if (stream.connectionState === "open") {
@@ -190,23 +238,12 @@ const IncidentsPageComponent: FC = () => {
     };
   }, [stream.connectionState]);
 
-  useEffect(() => {
-    const handleOpenComposer = () => {
-      setComposerOpen(true);
-    };
-
-    window.addEventListener(openComposerEventName, handleOpenComposer);
-    if (window.sessionStorage.getItem("incindigo_open_composer") === "1") {
-      window.sessionStorage.removeItem("incindigo_open_composer");
-      queueMicrotask(() => {
-        handleOpenComposer();
-      });
+  const selectedIncidentRunbooks = useMemo(() => {
+    if (!selectedIncident) {
+      return [];
     }
-
-    return () => {
-      window.removeEventListener(openComposerEventName, handleOpenComposer);
-    };
-  }, []);
+    return runbookMatchesByIncident.get(selectedIncident.id) ?? [];
+  }, [runbookMatchesByIncident, selectedIncident]);
 
   return (
     <section className="space-y-6 pb-24 xl:pb-0">
@@ -319,6 +356,7 @@ const IncidentsPageComponent: FC = () => {
                 <option value="all">All statuses</option>
                 <option value="open">Open only</option>
                 <option value="resolved">Resolved only</option>
+                <option value="cancelled">Cancelled only</option>
               </select>
 
               <select
@@ -387,7 +425,16 @@ const IncidentsPageComponent: FC = () => {
                       incident={incident}
                       onInspect={handleInspectIncident}
                       onResolve={handleResolveIncident}
-                      isResolving={resolveIncidentMutation.isPending}
+                      onCancel={handleCancelIncident}
+                      isResolving={
+                        resolveIncidentMutation.isPending &&
+                        resolveIncidentMutation.variables === incident.id
+                      }
+                      isCancelling={
+                        cancelIncidentMutation.isPending &&
+                        cancelIncidentMutation.variables.incidentID === incident.id
+                      }
+                      runbookMatchCount={runbookMatchesByIncident.get(incident.id)?.length ?? 0}
                     />
                   );
                 })}
@@ -395,39 +442,69 @@ const IncidentsPageComponent: FC = () => {
             )
           ) : null}
 
-          {!isPending && !isError && counts.resolved > 0 ? (
+          {!isPending && !isError && (counts.resolved > 0 || counts.cancelled > 0) ? (
             <Card className="border-emerald-400/20 bg-emerald-950/10">
               <p className="inline-flex items-center gap-2 text-sm text-emerald-200">
                 <CheckCircle2 className="size-4" />
-                Resolved incidents stay queryable and visible in historical filters.
+                Closed incidents (resolved/cancelled) stay queryable and visible in historical filters.
               </p>
             </Card>
           ) : null}
         </div>
       </div>
 
-      <Dialog open={isComposerOpen} onOpenChange={handleComposerOpenChange}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl p-0">
-          <div className="flex max-h-[88vh] flex-col">
-            <div className="space-y-1 border-b border-slate-800 px-6 py-5">
-              <DialogTitle className="font-display text-2xl font-semibold text-slate-50">
-                Incident Composer
-              </DialogTitle>
-              <DialogDescription className="text-sm text-slate-300">
-                Trigger incidents without leaving the live board.
-              </DialogDescription>
-            </div>
-            <div className="overflow-y-auto px-6 py-5">
-              <CreateIncidentForm
-                onCreate={handleCreateIncident}
-                isSubmitting={createIncidentMutation.isPending}
+      <IncidentDetailDialog
+        incident={selectedIncident}
+        matchedRunbooks={selectedIncidentRunbooks}
+        onOpenChange={handleDialogOpenChange}
+      />
+
+      <Dialog open={Boolean(incidentToCancel)} onOpenChange={handleCancelDialogOpenChange}>
+        <DialogContent className="max-w-lg">
+          <div className="space-y-4">
+            <DialogTitle className="font-display text-xl font-semibold text-slate-100">
+              Cancel Incident
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-300">
+              Mark this incident as cancelled for false positives or invalid alerts.
+            </DialogDescription>
+
+            {incidentToCancel ? (
+              <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-300">
+                <p className="font-semibold text-slate-100">{incidentToCancel.summary}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {incidentToCancel.source} • {incidentToCancel.event_type}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-200">Cancellation reason</p>
+              <TextArea
+                value={cancelReason}
+                onChange={(event) => setCancelReason(event.target.value)}
+                placeholder="False positive, duplicate alert, invalid monitor..."
               />
+              <p className="text-xs text-slate-500">Minimum 3 characters.</p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="ghost" onClick={() => handleCancelDialogOpenChange(false)}>
+                Keep Open
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void handleConfirmCancel();
+                }}
+                disabled={cancelIncidentMutation.isPending || cancelReason.trim().length < 3}
+              >
+                {cancelIncidentMutation.isPending ? "Cancelling..." : "Cancel Incident"}
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
-      <IncidentDetailDialog incident={selectedIncident} onOpenChange={handleDialogOpenChange} />
     </section>
   );
 };

@@ -24,6 +24,17 @@ const screenshot = async (page: Page, name: string) => {
 
 for (const scenario of scenarios) {
   test(`ui audit - ${scenario.id}`, async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "incindigo_auth_session",
+        JSON.stringify({
+          authenticatedAt: new Date().toISOString(),
+          email: "operator@incindigo.dev",
+          sessionToken: "session-token-demo-1234567890"
+        })
+      );
+    });
+
     await page.setViewportSize({ width: scenario.width, height: scenario.height });
     await page.goto("/");
 

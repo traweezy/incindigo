@@ -5,30 +5,25 @@ import {
   incidentOverviewQueryKey,
   incidentQueryKey
 } from "@/features/incidents/api/incidents-api";
+import {
+  incidentEventTypes,
+  incidentRegions,
+  incidentReporters,
+  incidentServices,
+  incidentSeverities,
+  incidentSources
+} from "@/features/incidents/lib/incident-taxonomy";
 import type {
   CreateIncidentInput,
-  IncidentSeverity
 } from "@/features/incidents/schemas/incident-schemas";
 
-const sources = ["manual-demo", "pagerduty", "grafana", "cloudwatch", "sentry"] as const;
-const eventTypes = [
-  "http.5xx",
-  "db.latency",
-  "cpu.high",
-  "memory.pressure",
-  "queue.backlog",
-  "disk.space"
-] as const;
-const services = ["api", "worker", "scheduler", "edge", "billing"] as const;
-const regions = ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"] as const;
-const severities: IncidentSeverity[] = ["critical", "high", "medium", "low"];
-
 const buildSeedInput = (index: number, seed: number): CreateIncidentInput => {
-  const source = sources[index % sources.length] ?? "manual-demo";
-  const eventType = eventTypes[index % eventTypes.length] ?? "http.5xx";
-  const severity = severities[index % severities.length] ?? "high";
-  const service = services[index % services.length] ?? "api";
-  const region = regions[index % regions.length] ?? "us-east-1";
+  const source = incidentSources[index % incidentSources.length] ?? "manual-demo";
+  const eventType = incidentEventTypes[index % incidentEventTypes.length] ?? "http.5xx";
+  const severity = incidentSeverities[index % incidentSeverities.length] ?? "high";
+  const service = incidentServices[index % incidentServices.length] ?? "api";
+  const region = incidentRegions[index % incidentRegions.length] ?? "us-east-1";
+  const reporter = incidentReporters[index % incidentReporters.length] ?? "alerts@incindigo.dev";
   const hostIndex = (index % 32) + 1;
 
   return {
@@ -37,6 +32,7 @@ const buildSeedInput = (index: number, seed: number): CreateIncidentInput => {
     event_type: eventType,
     summary: `${service} reported ${eventType} threshold breach in ${region}`,
     severity,
+    reported_by: reporter,
     metadata: {
       host: `${service}-${hostIndex}`,
       service,

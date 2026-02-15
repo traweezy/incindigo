@@ -3,8 +3,11 @@ import {
   incidentOverviewResponseSchema,
   createIncidentResponseSchema,
   incidentsResponseSchema,
+  cancelIncidentInputSchema,
+  cancelIncidentResponseSchema,
   resolveIncidentResponseSchema,
   timelineEventSchema,
+  type CancelIncidentInput,
   type CreateIncidentInput,
   type CreateIncidentResponse,
   type Incident,
@@ -12,16 +15,7 @@ import {
   type TimelineEvent
 } from "@/features/incidents/schemas/incident-schemas";
 import { fetchJson } from "@/shared/lib/net/fetch-json";
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? "";
-
-const toAPIURL = (path: string): string => {
-  if (API_BASE_URL.length === 0) {
-    return path;
-  }
-
-  return new URL(path, API_BASE_URL).toString();
-};
+import { toAPIURL } from "@/shared/lib/net/api-url";
 
 export const incidentQueryKey = ["incidents"] as const;
 export const incidentOverviewQueryKey = ["incidents-overview"] as const;
@@ -71,6 +65,20 @@ export const resolveIncident = async (incidentID: string): Promise<Incident> => 
   });
 
   const parsed = resolveIncidentResponseSchema.parse(payload);
+  return parsed.incident;
+};
+
+export const cancelIncident = async (incidentID: string, input: CancelIncidentInput): Promise<Incident> => {
+  const request = cancelIncidentInputSchema.parse(input);
+  const payload = await fetchJson<unknown>(toAPIURL(`/api/v1/incidents/${incidentID}/cancel`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  const parsed = cancelIncidentResponseSchema.parse(payload);
   return parsed.incident;
 };
 
