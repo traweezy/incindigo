@@ -1,0 +1,21 @@
+# Go
+bin/
+*.test
+*.out
+coverage.out
+
+# Node
+web/node_modules/
+web/dist/
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+.DS_Store
+tmp/

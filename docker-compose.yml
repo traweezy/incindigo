@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: incindigo-db
+    environment:
+      POSTGRES_DB: incindigo
+      POSTGRES_USER: incindigo
+      POSTGRES_PASSWORD: incindigo
+    ports:
+      - "5432:5432"
+    volumes:
+      - incindigo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incindigo -d incindigo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  incindigo_pgdata:

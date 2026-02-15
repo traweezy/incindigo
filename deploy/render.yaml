@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: incindigo-api
+    runtime: docker
+    plan: starter
+    envVars:
+      - key: INCINDIGO_ADDR
+        value: :8080
+      - key: INCINDIGO_DATABASE_URL
+        sync: false
+      - key: INCINDIGO_PUBLIC_API_BASE_URL
+        value: https://incindigo-api.onrender.com
+
+databases:
+  - name: incindigo-db
+    plan: basic-256mb
