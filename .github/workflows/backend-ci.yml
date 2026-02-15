@@ -2,29 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'cmd/**'
-      - 'internal/**'
-      - 'migrations/**'
-      - 'db/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Dockerfile'
-      - 'Makefile'
-      - '.github/workflows/backend-ci.yml'
   pull_request:
-    paths:
-      - 'cmd/**'
-      - 'internal/**'
-      - 'migrations/**'
-      - 'db/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Dockerfile'
-      - 'Makefile'
-      - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
 permissions:
