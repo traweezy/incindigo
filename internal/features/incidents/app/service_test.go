@@ -18,6 +18,7 @@ type incidentsRepoMock struct {
 	upsertFromWebhookFunc func(ctx context.Context, input WebhookInput) (domain.Incident, bool, error)
 	listFunc              func(ctx context.Context, limit int32) ([]domain.Incident, error)
 	resolveFunc           func(ctx context.Context, incidentID uuid.UUID) (domain.Incident, error)
+	cancelFunc            func(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error)
 	autoResolveFunc       func(ctx context.Context, olderThan time.Time) ([]domain.Incident, error)
 	overviewFunc          func(ctx context.Context) (Overview, error)
 }
@@ -32,6 +33,13 @@ func (m *incidentsRepoMock) List(ctx context.Context, limit int32) ([]domain.Inc
 
 func (m *incidentsRepoMock) Resolve(ctx context.Context, incidentID uuid.UUID) (domain.Incident, error) {
 	return m.resolveFunc(ctx, incidentID)
+}
+
+func (m *incidentsRepoMock) Cancel(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error) {
+	if m.cancelFunc == nil {
+		return domain.Incident{}, nil
+	}
+	return m.cancelFunc(ctx, incidentID, reason, cancelledBy)
 }
 
 func (m *incidentsRepoMock) AutoResolveExpired(ctx context.Context, olderThan time.Time) ([]domain.Incident, error) {
@@ -78,6 +86,7 @@ func sampleIncident(status domain.Status) domain.Incident {
 		EventType:   "cpu.high",
 		Summary:     "CPU above threshold",
 		Severity:    "high",
+		ReportedBy:  "oncall@example.com",
 		Status:      status,
 		Metadata:    map[string]any{"host": "api-1"},
 		CreatedAt:   time.Now().UTC(),
@@ -204,6 +213,50 @@ func TestResolveIncidentPublishesResolvedEvent(t *testing.T) {
 	events := publisher.list()
 	if len(events) != 1 || events[0].EventType != "resolved" {
 		t.Fatalf("expected one resolved event")
+	}
+}
+
+func TestCancelIncidentPublishesCancelledEvent(t *testing.T) {
+	cancelled := sampleIncident(domain.StatusCancelled)
+	reason := "false positive"
+	cancelled.CancelReason = &reason
+	cancelledBy := "reviewer@incindigo.dev"
+	cancelled.CancelledBy = &cancelledBy
+	now := time.Now().UTC()
+	cancelled.CancelledAt = &now
+
+	repo := &incidentsRepoMock{
+		upsertFromWebhookFunc: func(context.Context, WebhookInput) (domain.Incident, bool, error) {
+			return domain.Incident{}, false, nil
+		},
+		listFunc:    func(context.Context, int32) ([]domain.Incident, error) { return nil, nil },
+		resolveFunc: func(context.Context, uuid.UUID) (domain.Incident, error) { return domain.Incident{}, nil },
+		cancelFunc: func(_ context.Context, _ uuid.UUID, gotReason, gotCancelledBy string) (domain.Incident, error) {
+			if gotReason != reason {
+				t.Fatalf("expected reason %q, got %q", reason, gotReason)
+			}
+			if gotCancelledBy != cancelledBy {
+				t.Fatalf("expected cancelledBy %q, got %q", cancelledBy, gotCancelledBy)
+			}
+			return cancelled, nil
+		},
+		autoResolveFunc: func(context.Context, time.Time) ([]domain.Incident, error) { return nil, nil },
+	}
+
+	publisher := &publisherMock{}
+	service := newIncidentServiceForTest(repo, publisher)
+
+	result, err := service.CancelIncident(context.Background(), uuid.New(), reason, cancelledBy)
+	if err != nil {
+		t.Fatalf("CancelIncident returned error: %v", err)
+	}
+	if result.Status != domain.StatusCancelled {
+		t.Fatalf("expected cancelled status")
+	}
+
+	events := publisher.list()
+	if len(events) != 1 || events[0].EventType != "cancelled" {
+		t.Fatalf("expected one cancelled event")
 	}
 }
 

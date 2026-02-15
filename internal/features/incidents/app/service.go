@@ -19,6 +19,7 @@ type WebhookInput struct {
 	EventType   string
 	Summary     string
 	Severity    string
+	ReportedBy  string
 	Metadata    map[string]any
 }
 
@@ -26,6 +27,7 @@ type Repository interface {
 	UpsertFromWebhook(ctx context.Context, input WebhookInput) (domain.Incident, bool, error)
 	List(ctx context.Context, limit int32) ([]domain.Incident, error)
 	Resolve(ctx context.Context, incidentID uuid.UUID) (domain.Incident, error)
+	Cancel(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error)
 	AutoResolveExpired(ctx context.Context, olderThan time.Time) ([]domain.Incident, error)
 	Overview(ctx context.Context) (Overview, error)
 }
@@ -54,6 +56,7 @@ type OverviewCounts struct {
 	Total    int64          `json:"total"`
 	Open     int64          `json:"open"`
 	Resolved int64          `json:"resolved"`
+	Cancelled int64         `json:"cancelled"`
 	Severity SeverityCounts `json:"severity"`
 }
 
@@ -133,6 +136,22 @@ func (s *Service) ResolveIncident(ctx context.Context, incidentID uuid.UUID) (do
 	s.metrics.IncidentEvents.WithLabelValues("resolved").Inc()
 	s.publisher.Publish(domain.TimelineEvent{
 		EventType:  "resolved",
+		Incident:   incident,
+		OccurredAt: time.Now().UTC(),
+	})
+
+	return incident, nil
+}
+
+func (s *Service) CancelIncident(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error) {
+	incident, err := s.repo.Cancel(ctx, incidentID, reason, cancelledBy)
+	if err != nil {
+		return domain.Incident{}, err
+	}
+
+	s.metrics.IncidentEvents.WithLabelValues("cancelled").Inc()
+	s.publisher.Publish(domain.TimelineEvent{
+		EventType:  "cancelled",
 		Incident:   incident,
 		OccurredAt: time.Now().UTC(),
 	})

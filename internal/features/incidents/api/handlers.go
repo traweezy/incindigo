@@ -25,7 +25,13 @@ type webhookRequest struct {
 	EventType   string         `json:"event_type" validate:"required,max=128"`
 	Summary     string         `json:"summary" validate:"required,max=512"`
 	Severity    string         `json:"severity" validate:"required,oneof=critical high medium low"`
+	ReportedBy  string         `json:"reported_by" validate:"required,max=320"`
 	Metadata    map[string]any `json:"metadata"`
+}
+
+type cancelIncidentRequest struct {
+	Reason      string `json:"reason" validate:"required,min=3,max=500"`
+	CancelledBy string `json:"cancelled_by" validate:"omitempty,max=320"`
 }
 
 func NewHandler(service *app.Service, logger *zap.Logger) *Handler {
@@ -58,6 +64,7 @@ func (h *Handler) PostWebhook(w http.ResponseWriter, r *http.Request) {
 		EventType:   request.EventType,
 		Summary:     request.Summary,
 		Severity:    request.Severity,
+		ReportedBy:  request.ReportedBy,
 		Metadata:    request.Metadata,
 	})
 	if err != nil {
@@ -70,6 +77,39 @@ func (h *Handler) PostWebhook(w http.ResponseWriter, r *http.Request) {
 		"incident":     incident,
 		"deduplicated": !created,
 	})
+}
+
+func (h *Handler) CancelIncident(w http.ResponseWriter, r *http.Request) {
+	incidentID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		problem.Write(w, r, http.StatusBadRequest, "Invalid id", "Incident id must be a UUID.", nil)
+		return
+	}
+
+	request := cancelIncidentRequest{}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		problem.Write(w, r, http.StatusBadRequest, "Invalid payload", "Request body must be valid JSON.", nil)
+		return
+	}
+	if err := h.validator.Struct(request); err != nil {
+		problem.Write(w, r, http.StatusBadRequest, "Validation failed", "Cancel payload is invalid.", validationErrors(err))
+		return
+	}
+
+	incident, err := h.service.CancelIncident(r.Context(), incidentID, request.Reason, request.CancelledBy)
+	if err != nil {
+		if errors.Is(err, app.ErrIncidentNotFound) {
+			problem.Write(w, r, http.StatusNotFound, "Not found", "Incident does not exist or is already closed.", nil)
+			return
+		}
+		h.logger.Error("cancel incident failed", zap.Error(err), zap.String("incident_id", incidentID.String()))
+		problem.Write(w, r, http.StatusInternalServerError, "Cancel failed", "Unable to cancel incident.", nil)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"incident": incident})
 }
 
 func (h *Handler) ListIncidents(w http.ResponseWriter, r *http.Request) {

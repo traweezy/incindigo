@@ -84,11 +84,15 @@ func main() {
 	mux.HandleFunc("GET /api/v1/incidents", incidentHandler.ListIncidents)
 	mux.HandleFunc("GET /api/v1/incidents/overview", incidentHandler.Overview)
 	mux.HandleFunc("POST /api/v1/incidents/{id}/resolve", incidentHandler.ResolveIncident)
+	mux.HandleFunc("POST /api/v1/incidents/{id}/cancel", incidentHandler.CancelIncident)
 	mux.Handle("GET /api/v1/incidents/stream", incidentBroker)
+	mux.HandleFunc("GET /api/v1/incidents/{id}/runbooks", runbookHandler.ListRunbooksForIncident)
 	mux.HandleFunc("POST /api/v1/auth/magic-link/start", authHandler.StartMagicLink)
 	mux.HandleFunc("POST /api/v1/auth/magic-link/verify", authHandler.VerifyMagicLink)
 	mux.HandleFunc("GET /api/v1/runbooks", runbookHandler.ListRunbooks)
 	mux.HandleFunc("POST /api/v1/runbooks", runbookHandler.CreateRunbook)
+	mux.HandleFunc("PUT /api/v1/runbooks/{id}", runbookHandler.UpdateRunbook)
+	mux.HandleFunc("DELETE /api/v1/runbooks/{id}", runbookHandler.DeleteRunbook)
 
 	instrumented := otelhttp.NewHandler(mux, "incindigo.http")
 	handler := httpx.Chain(

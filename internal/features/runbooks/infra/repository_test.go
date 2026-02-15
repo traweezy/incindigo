@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -30,8 +31,13 @@ func TestScanTemplateRowParsesChecklist(t *testing.T) {
 			*(dest[1].(*string)) = "DB Failure Runbook"
 			*(dest[2].(*string)) = "Steps for DB outages"
 			*(dest[3].(*[]byte)) = []byte(`[{"id":"1","title":"Check replication lag","completed":false}]`)
-			*(dest[4].(*time.Time)) = createdAt
-			*(dest[5].(*time.Time)) = updatedAt
+			*(dest[4].(*sql.NullString)) = sql.NullString{String: "pagerduty", Valid: true}
+			*(dest[5].(*sql.NullString)) = sql.NullString{String: "db.latency", Valid: true}
+			*(dest[6].(*sql.NullString)) = sql.NullString{String: "api", Valid: true}
+			*(dest[7].(*sql.NullString)) = sql.NullString{String: "high", Valid: true}
+			*(dest[8].(*sql.NullString)) = sql.NullString{String: "db", Valid: true}
+			*(dest[9].(*time.Time)) = createdAt
+			*(dest[10].(*time.Time)) = updatedAt
 			return nil
 		},
 	}
@@ -50,6 +56,9 @@ func TestScanTemplateRowParsesChecklist(t *testing.T) {
 	if template.Checklist[0].Title != "Check replication lag" {
 		t.Fatalf("unexpected checklist title: %q", template.Checklist[0].Title)
 	}
+	if template.Match.Source != "pagerduty" || template.Match.EventType != "db.latency" {
+		t.Fatalf("expected match fields to be populated")
+	}
 }
 
 func TestScanTemplateRowDefaultsNilChecklistToEmptySlice(t *testing.T) {
@@ -61,8 +70,13 @@ func TestScanTemplateRowDefaultsNilChecklistToEmptySlice(t *testing.T) {
 			*(dest[1].(*string)) = "Template"
 			*(dest[2].(*string)) = "Description"
 			*(dest[3].(*[]byte)) = []byte("null")
-			*(dest[4].(*time.Time)) = time.Now().UTC()
-			*(dest[5].(*time.Time)) = time.Now().UTC()
+			*(dest[4].(*sql.NullString)) = sql.NullString{}
+			*(dest[5].(*sql.NullString)) = sql.NullString{}
+			*(dest[6].(*sql.NullString)) = sql.NullString{}
+			*(dest[7].(*sql.NullString)) = sql.NullString{}
+			*(dest[8].(*sql.NullString)) = sql.NullString{}
+			*(dest[9].(*time.Time)) = time.Now().UTC()
+			*(dest[10].(*time.Time)) = time.Now().UTC()
 			return nil
 		},
 	}
@@ -88,8 +102,13 @@ func TestScanTemplateRowReturnsJSONError(t *testing.T) {
 			*(dest[1].(*string)) = "Template"
 			*(dest[2].(*string)) = "Description"
 			*(dest[3].(*[]byte)) = []byte(`[{"id":`)
-			*(dest[4].(*time.Time)) = time.Now().UTC()
-			*(dest[5].(*time.Time)) = time.Now().UTC()
+			*(dest[4].(*sql.NullString)) = sql.NullString{}
+			*(dest[5].(*sql.NullString)) = sql.NullString{}
+			*(dest[6].(*sql.NullString)) = sql.NullString{}
+			*(dest[7].(*sql.NullString)) = sql.NullString{}
+			*(dest[8].(*sql.NullString)) = sql.NullString{}
+			*(dest[9].(*time.Time)) = time.Now().UTC()
+			*(dest[10].(*time.Time)) = time.Now().UTC()
 			return nil
 		},
 	}

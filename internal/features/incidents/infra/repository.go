@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,12 +41,13 @@ func (r *Repository) UpsertFromWebhook(ctx context.Context, input app.WebhookInp
 		return domain.Incident{}, false, err
 	}
 	if found {
-		err = updateIncidentFromWebhook(ctx, tx, incident.ID, input.Summary, input.Severity, metadataBytes)
+		err = updateIncidentFromWebhook(ctx, tx, incident.ID, input.Summary, input.Severity, input.ReportedBy, metadataBytes)
 		if err != nil {
 			return domain.Incident{}, false, err
 		}
 		incident.Summary = input.Summary
 		incident.Severity = input.Severity
+		incident.ReportedBy = input.ReportedBy
 		incident.Metadata = input.Metadata
 		incident.UpdatedAt = time.Now().UTC()
 
@@ -63,12 +65,13 @@ func (r *Repository) UpsertFromWebhook(ctx context.Context, input app.WebhookInp
 				return domain.Incident{}, false, selectErr
 			}
 			if found {
-				err = updateIncidentFromWebhook(ctx, tx, incident.ID, input.Summary, input.Severity, metadataBytes)
+				err = updateIncidentFromWebhook(ctx, tx, incident.ID, input.Summary, input.Severity, input.ReportedBy, metadataBytes)
 				if err != nil {
 					return domain.Incident{}, false, err
 				}
 				incident.Summary = input.Summary
 				incident.Severity = input.Severity
+				incident.ReportedBy = input.ReportedBy
 				incident.Metadata = input.Metadata
 				incident.UpdatedAt = time.Now().UTC()
 				if err := tx.Commit(ctx); err != nil {
@@ -89,7 +92,7 @@ func (r *Repository) UpsertFromWebhook(ctx context.Context, input app.WebhookInp
 
 func (r *Repository) List(ctx context.Context, limit int32) ([]domain.Incident, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, fingerprint, source, event_type, summary, severity, status, metadata, created_at, updated_at, resolved_at
+		SELECT id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata, created_at, updated_at, resolved_at, cancelled_at, cancel_reason, cancelled_by
 		FROM incidents
 		ORDER BY created_at DESC
 		LIMIT $1`, limit)
@@ -117,9 +120,34 @@ func (r *Repository) List(ctx context.Context, limit int32) ([]domain.Incident, 
 func (r *Repository) Resolve(ctx context.Context, incidentID uuid.UUID) (domain.Incident, error) {
 	row := r.pool.QueryRow(ctx, `
 		UPDATE incidents
-		SET status = 'resolved', resolved_at = now(), updated_at = now()
+		SET status = 'resolved', resolved_at = now(), cancelled_at = NULL, cancel_reason = NULL, cancelled_by = NULL, updated_at = now()
 		WHERE id = $1 AND status = 'open'
-		RETURNING id, fingerprint, source, event_type, summary, severity, status, metadata, created_at, updated_at, resolved_at`, incidentID)
+		RETURNING id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata, created_at, updated_at, resolved_at, cancelled_at, cancel_reason, cancelled_by`, incidentID)
+
+	incident, err := scanIncidentRow(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Incident{}, app.ErrIncidentNotFound
+		}
+		return domain.Incident{}, err
+	}
+	return incident, nil
+}
+
+func (r *Repository) Cancel(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error) {
+	row := r.pool.QueryRow(ctx, `
+		UPDATE incidents
+		SET status = 'cancelled',
+			cancelled_at = now(),
+			cancel_reason = $2,
+			cancelled_by = $3,
+			updated_at = now()
+		WHERE id = $1 AND status = 'open'
+		RETURNING id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata, created_at, updated_at, resolved_at, cancelled_at, cancel_reason, cancelled_by`,
+		incidentID,
+		reason,
+		nullableString(cancelledBy),
+	)
 
 	incident, err := scanIncidentRow(row)
 	if err != nil {
@@ -134,9 +162,9 @@ func (r *Repository) Resolve(ctx context.Context, incidentID uuid.UUID) (domain.
 func (r *Repository) AutoResolveExpired(ctx context.Context, olderThan time.Time) ([]domain.Incident, error) {
 	rows, err := r.pool.Query(ctx, `
 		UPDATE incidents
-		SET status = 'resolved', resolved_at = now(), updated_at = now()
+		SET status = 'resolved', resolved_at = now(), cancelled_at = NULL, cancel_reason = NULL, cancelled_by = NULL, updated_at = now()
 		WHERE status = 'open' AND updated_at < $1
-		RETURNING id, fingerprint, source, event_type, summary, severity, status, metadata, created_at, updated_at, resolved_at`, olderThan)
+		RETURNING id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata, created_at, updated_at, resolved_at, cancelled_at, cancel_reason, cancelled_by`, olderThan)
 	if err != nil {
 		return nil, fmt.Errorf("auto resolve incidents: %w", err)
 	}
@@ -168,6 +196,7 @@ func (r *Repository) Overview(ctx context.Context) (app.Overview, error) {
 			COUNT(*)::bigint AS total,
 			COUNT(*) FILTER (WHERE status = 'open')::bigint AS open,
 			COUNT(*) FILTER (WHERE status = 'resolved')::bigint AS resolved,
+			COUNT(*) FILTER (WHERE status = 'cancelled')::bigint AS cancelled,
 			COUNT(*) FILTER (WHERE severity = 'critical')::bigint AS critical,
 			COUNT(*) FILTER (WHERE severity = 'high')::bigint AS high,
 			COUNT(*) FILTER (WHERE severity = 'medium')::bigint AS medium,
@@ -180,6 +209,7 @@ func (r *Repository) Overview(ctx context.Context) (app.Overview, error) {
 		&overview.Counts.Total,
 		&overview.Counts.Open,
 		&overview.Counts.Resolved,
+		&overview.Counts.Cancelled,
 		&overview.Counts.Severity.Critical,
 		&overview.Counts.Severity.High,
 		&overview.Counts.Severity.Medium,
@@ -214,7 +244,7 @@ func (r *Repository) Overview(ctx context.Context) (app.Overview, error) {
 
 func selectOpenByFingerprint(ctx context.Context, tx pgx.Tx, fingerprint string) (domain.Incident, bool, error) {
 	row := tx.QueryRow(ctx, `
-		SELECT id, fingerprint, source, event_type, summary, severity, status, metadata, created_at, updated_at, resolved_at
+		SELECT id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata, created_at, updated_at, resolved_at, cancelled_at, cancel_reason, cancelled_by
 		FROM incidents
 		WHERE fingerprint = $1 AND status = 'open'
 		LIMIT 1
@@ -332,11 +362,11 @@ func (r *Repository) queryRecentActivity(ctx context.Context) ([]app.ActivityAgg
 	return activity, nil
 }
 
-func updateIncidentFromWebhook(ctx context.Context, tx pgx.Tx, incidentID uuid.UUID, summary, severity string, metadata []byte) error {
+func updateIncidentFromWebhook(ctx context.Context, tx pgx.Tx, incidentID uuid.UUID, summary, severity, reportedBy string, metadata []byte) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE incidents
-		SET summary = $2, severity = $3, metadata = $4, updated_at = now()
-		WHERE id = $1`, incidentID, summary, severity, metadata)
+		SET summary = $2, severity = $3, reported_by = $4, metadata = $5, updated_at = now()
+		WHERE id = $1`, incidentID, summary, severity, reportedBy, metadata)
 	if err != nil {
 		return fmt.Errorf("update incident from webhook: %w", err)
 	}
@@ -345,15 +375,16 @@ func updateIncidentFromWebhook(ctx context.Context, tx pgx.Tx, incidentID uuid.U
 
 func insertIncident(ctx context.Context, tx pgx.Tx, input app.WebhookInput, metadata []byte) (domain.Incident, error) {
 	row := tx.QueryRow(ctx, `
-		INSERT INTO incidents (id, fingerprint, source, event_type, summary, severity, status, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)
-		RETURNING id, fingerprint, source, event_type, summary, severity, status, metadata, created_at, updated_at, resolved_at`,
+		INSERT INTO incidents (id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8)
+		RETURNING id, fingerprint, source, event_type, summary, severity, reported_by, status, metadata, created_at, updated_at, resolved_at, cancelled_at, cancel_reason, cancelled_by`,
 		uuid.New(),
 		input.Fingerprint,
 		input.Source,
 		input.EventType,
 		input.Summary,
 		input.Severity,
+		input.ReportedBy,
 		metadata,
 	)
 	incident, err := scanIncidentRow(row)
@@ -383,11 +414,15 @@ func scanIncidentRow(row interface {
 		&incident.EventType,
 		&incident.Summary,
 		&incident.Severity,
+		&incident.ReportedBy,
 		&status,
 		&metadataJSON,
 		&incident.CreatedAt,
 		&incident.UpdatedAt,
 		&incident.ResolvedAt,
+		&incident.CancelledAt,
+		&incident.CancelReason,
+		&incident.CancelledBy,
 	)
 	if err != nil {
 		return domain.Incident{}, err
@@ -408,4 +443,12 @@ func scanIncidentRow(row interface {
 	}
 
 	return incident, nil
+}
+
+func nullableString(value string) any {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	return trimmed
 }

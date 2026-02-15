@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,14 +89,34 @@ func applyBaseMigration(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(filePath), "..", ".."))
-	migrationPath := filepath.Join(repoRoot, "migrations", "000001_init.up.sql")
-	migrationSQL, err := os.ReadFile(migrationPath)
+	migrationDir := filepath.Join(repoRoot, "migrations")
+	entries, err := os.ReadDir(migrationDir)
 	if err != nil {
-		return fmt.Errorf("read migration %s: %w", migrationPath, err)
+		return fmt.Errorf("read migrations directory %s: %w", migrationDir, err)
 	}
 
-	if _, err := pool.Exec(ctx, string(migrationSQL)); err != nil {
-		return fmt.Errorf("exec base migration: %w", err)
+	upMigrations := make([]string, 0)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if strings.HasSuffix(name, ".up.sql") {
+			upMigrations = append(upMigrations, filepath.Join(migrationDir, name))
+		}
+	}
+
+	sort.Strings(upMigrations)
+	for _, migrationPath := range upMigrations {
+		migrationSQL, readErr := os.ReadFile(migrationPath)
+		if readErr != nil {
+			return fmt.Errorf("read migration %s: %w", migrationPath, readErr)
+		}
+
+		if _, execErr := pool.Exec(ctx, string(migrationSQL)); execErr != nil {
+			return fmt.Errorf("exec migration %s: %w", migrationPath, execErr)
+		}
 	}
 
 	return nil

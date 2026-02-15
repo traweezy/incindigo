@@ -22,6 +22,7 @@ type repoMock struct {
 	upsertFromWebhookFunc func(ctx context.Context, input incidentsapp.WebhookInput) (domain.Incident, bool, error)
 	listFunc              func(ctx context.Context, limit int32) ([]domain.Incident, error)
 	resolveFunc           func(ctx context.Context, incidentID uuid.UUID) (domain.Incident, error)
+	cancelFunc            func(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error)
 	autoResolveFunc       func(ctx context.Context, olderThan time.Time) ([]domain.Incident, error)
 	overviewFunc          func(ctx context.Context) (incidentsapp.Overview, error)
 }
@@ -36,6 +37,13 @@ func (m *repoMock) List(ctx context.Context, limit int32) ([]domain.Incident, er
 
 func (m *repoMock) Resolve(ctx context.Context, incidentID uuid.UUID) (domain.Incident, error) {
 	return m.resolveFunc(ctx, incidentID)
+}
+
+func (m *repoMock) Cancel(ctx context.Context, incidentID uuid.UUID, reason, cancelledBy string) (domain.Incident, error) {
+	if m.cancelFunc == nil {
+		return domain.Incident{}, nil
+	}
+	return m.cancelFunc(ctx, incidentID, reason, cancelledBy)
 }
 
 func (m *repoMock) AutoResolveExpired(ctx context.Context, olderThan time.Time) ([]domain.Incident, error) {
@@ -70,6 +78,7 @@ func testIncident() domain.Incident {
 		EventType:   "cpu.high",
 		Summary:     "CPU high",
 		Severity:    "high",
+		ReportedBy:  "oncall@example.com",
 		Status:      domain.StatusOpen,
 		Metadata:    map[string]any{"host": "api-1"},
 		CreatedAt:   time.Now().UTC(),
@@ -113,6 +122,7 @@ func TestPostWebhookSuccess(t *testing.T) {
 		"event_type":  "cpu.high",
 		"summary":     "CPU high",
 		"severity":    "high",
+		"reported_by": "oncall@example.com",
 		"metadata":    map[string]any{"host": "api-1"},
 	}
 	bytesPayload, _ := json.Marshal(payload)
@@ -247,6 +257,47 @@ func TestResolveIncidentSuccess(t *testing.T) {
 	}
 	if _, ok := response["incident"]; !ok {
 		t.Fatalf("expected incident payload")
+	}
+}
+
+func TestCancelIncidentSuccess(t *testing.T) {
+	incident := testIncident()
+	reason := "false positive"
+	cancelledBy := "reviewer@incindigo.dev"
+	incident.Status = domain.StatusCancelled
+	incident.CancelReason = &reason
+	incident.CancelledBy = &cancelledBy
+	cancelledAt := time.Now().UTC()
+	incident.CancelledAt = &cancelledAt
+
+	handler := newHandlerForTest(t, &repoMock{
+		upsertFromWebhookFunc: func(context.Context, incidentsapp.WebhookInput) (domain.Incident, bool, error) {
+			return domain.Incident{}, false, nil
+		},
+		listFunc:    func(context.Context, int32) ([]domain.Incident, error) { return nil, nil },
+		resolveFunc: func(context.Context, uuid.UUID) (domain.Incident, error) { return domain.Incident{}, nil },
+		cancelFunc: func(_ context.Context, _ uuid.UUID, gotReason, gotCancelledBy string) (domain.Incident, error) {
+			if gotReason != reason || gotCancelledBy != cancelledBy {
+				t.Fatalf("unexpected cancel payload passed to service")
+			}
+			return incident, nil
+		},
+		autoResolveFunc: func(context.Context, time.Time) ([]domain.Incident, error) { return nil, nil },
+	})
+
+	incidentID := uuid.New()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/incidents/"+incidentID.String()+"/cancel", bytes.NewBufferString(`{
+		"reason":"false positive",
+		"cancelled_by":"reviewer@incindigo.dev"
+	}`))
+	recorder := httptest.NewRecorder()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/incidents/{id}/cancel", handler.CancelIncident)
+	mux.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
 	}
 }
 

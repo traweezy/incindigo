@@ -22,6 +22,7 @@ func TestRepositoryUpsertResolveAndListIntegration(t *testing.T) {
 		EventType:   "http.5xx",
 		Summary:     "Initial API failure",
 		Severity:    "high",
+		ReportedBy:  "integration@test",
 		Metadata: map[string]any{
 			"service": "api",
 		},
@@ -42,6 +43,7 @@ func TestRepositoryUpsertResolveAndListIntegration(t *testing.T) {
 		EventType:   "http.5xx",
 		Summary:     "API failures persisted",
 		Severity:    "critical",
+		ReportedBy:  "integration@test",
 		Metadata: map[string]any{
 			"service": "edge",
 		},
@@ -98,6 +100,7 @@ func TestRepositoryAutoResolveExpiredIntegration(t *testing.T) {
 		EventType:   "db.latency",
 		Summary:     "Old incident to auto resolve",
 		Severity:    "medium",
+		ReportedBy:  "integration@test",
 		Metadata:    map[string]any{"service": "db"},
 	})
 	if err != nil {
@@ -111,6 +114,7 @@ func TestRepositoryAutoResolveExpiredIntegration(t *testing.T) {
 		EventType:   "cpu.high",
 		Summary:     "Fresh incident to keep open",
 		Severity:    "low",
+		ReportedBy:  "integration@test",
 		Metadata:    map[string]any{"service": "api"},
 	})
 	if err != nil {
@@ -160,6 +164,7 @@ func TestRepositoryOverviewIntegration(t *testing.T) {
 		EventType:   "cpu.high",
 		Summary:     "Open overview incident",
 		Severity:    "critical",
+		ReportedBy:  "integration@test",
 		Metadata:    map[string]any{"service": "api"},
 	})
 	if err != nil {
@@ -172,6 +177,7 @@ func TestRepositoryOverviewIntegration(t *testing.T) {
 		EventType:   "db.latency",
 		Summary:     "Resolved overview incident",
 		Severity:    "high",
+		ReportedBy:  "integration@test",
 		Metadata:    map[string]any{"service": "worker"},
 	})
 	if err != nil {
@@ -204,5 +210,51 @@ func TestRepositoryOverviewIntegration(t *testing.T) {
 	}
 	if len(overview.RecentActivity) == 0 {
 		t.Fatalf("expected recent_activity buckets")
+	}
+}
+
+func TestRepositoryCancelIncidentIntegration(t *testing.T) {
+	pool := testutil.StartPostgres(t)
+	repository := NewRepository(pool)
+	ctx := context.Background()
+
+	incident, created, err := repository.UpsertFromWebhook(ctx, incidentsapp.WebhookInput{
+		Fingerprint: "cancelled-fingerprint",
+		Source:      "manual-demo",
+		EventType:   "queue.backlog",
+		Summary:     "Backlog spiked",
+		Severity:    "medium",
+		ReportedBy:  "integration@test",
+		Metadata: map[string]any{
+			"service": "worker",
+		},
+	})
+	if err != nil {
+		t.Fatalf("create incident: %v", err)
+	}
+	if !created {
+		t.Fatalf("expected new incident")
+	}
+
+	cancelled, err := repository.Cancel(ctx, incident.ID, "false positive", "reviewer@test")
+	if err != nil {
+		t.Fatalf("cancel incident: %v", err)
+	}
+	if cancelled.Status != domain.StatusCancelled {
+		t.Fatalf("expected cancelled status, got %s", cancelled.Status)
+	}
+	if cancelled.CancelledAt == nil {
+		t.Fatalf("expected cancelled_at to be set")
+	}
+	if cancelled.CancelReason == nil || *cancelled.CancelReason != "false positive" {
+		t.Fatalf("expected cancel_reason to be persisted")
+	}
+	if cancelled.CancelledBy == nil || *cancelled.CancelledBy != "reviewer@test" {
+		t.Fatalf("expected cancelled_by to be persisted")
+	}
+
+	_, err = repository.Cancel(ctx, incident.ID, "again", "reviewer@test")
+	if !errors.Is(err, incidentsapp.ErrIncidentNotFound) {
+		t.Fatalf("expected ErrIncidentNotFound on second cancel, got %v", err)
 	}
 }

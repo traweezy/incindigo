@@ -34,11 +34,15 @@ func TestScanIncidentRowParsesMetadata(t *testing.T) {
 			*(dest[3].(*string)) = "disk.warning"
 			*(dest[4].(*string)) = "Disk pressure warning"
 			*(dest[5].(*string)) = "high"
-			*(dest[6].(*string)) = string(domain.StatusResolved)
-			*(dest[7].(*[]byte)) = []byte(`{"service":"api","attempts":3}`)
-			*(dest[8].(*time.Time)) = createdAt
-			*(dest[9].(*time.Time)) = updatedAt
-			*(dest[10].(**time.Time)) = &resolvedAt
+			*(dest[6].(*string)) = "reporter@example.com"
+			*(dest[7].(*string)) = string(domain.StatusResolved)
+			*(dest[8].(*[]byte)) = []byte(`{"service":"api","attempts":3}`)
+			*(dest[9].(*time.Time)) = createdAt
+			*(dest[10].(*time.Time)) = updatedAt
+			*(dest[11].(**time.Time)) = &resolvedAt
+			*(dest[12].(**time.Time)) = nil
+			*(dest[13].(**string)) = nil
+			*(dest[14].(**string)) = nil
 			return nil
 		},
 	}
@@ -79,11 +83,15 @@ func TestScanIncidentRowDefaultsEmptyMetadataMap(t *testing.T) {
 			*(dest[3].(*string)) = "event"
 			*(dest[4].(*string)) = "summary"
 			*(dest[5].(*string)) = "low"
-			*(dest[6].(*string)) = string(domain.StatusOpen)
-			*(dest[7].(*[]byte)) = []byte{}
-			*(dest[8].(*time.Time)) = createdAt
-			*(dest[9].(*time.Time)) = updatedAt
-			*(dest[10].(**time.Time)) = nil
+			*(dest[6].(*string)) = "reporter@example.com"
+			*(dest[7].(*string)) = string(domain.StatusOpen)
+			*(dest[8].(*[]byte)) = []byte{}
+			*(dest[9].(*time.Time)) = createdAt
+			*(dest[10].(*time.Time)) = updatedAt
+			*(dest[11].(**time.Time)) = nil
+			*(dest[12].(**time.Time)) = nil
+			*(dest[13].(**string)) = nil
+			*(dest[14].(**string)) = nil
 			return nil
 		},
 	}
@@ -111,11 +119,15 @@ func TestScanIncidentRowReturnsJSONError(t *testing.T) {
 			*(dest[3].(*string)) = "event"
 			*(dest[4].(*string)) = "summary"
 			*(dest[5].(*string)) = "medium"
-			*(dest[6].(*string)) = string(domain.StatusOpen)
-			*(dest[7].(*[]byte)) = []byte(`{"service":`)
-			*(dest[8].(*time.Time)) = time.Now().UTC()
+			*(dest[6].(*string)) = "reporter@example.com"
+			*(dest[7].(*string)) = string(domain.StatusOpen)
+			*(dest[8].(*[]byte)) = []byte(`{"service":`)
 			*(dest[9].(*time.Time)) = time.Now().UTC()
-			*(dest[10].(**time.Time)) = nil
+			*(dest[10].(*time.Time)) = time.Now().UTC()
+			*(dest[11].(**time.Time)) = nil
+			*(dest[12].(**time.Time)) = nil
+			*(dest[13].(**string)) = nil
+			*(dest[14].(**string)) = nil
 			return nil
 		},
 	}
