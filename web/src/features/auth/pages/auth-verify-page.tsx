@@ -91,7 +91,9 @@ const AuthVerifyPageComponent: FC = () => {
   return (
     <section className="mx-auto w-full max-w-xl space-y-6 py-8">
       <Card className="space-y-3 border-indigo-300/40 bg-gradient-to-r from-indigo-950/65 via-slate-900 to-slate-900">
-        <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">Authentication</p>
+        <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">
+          Authentication
+        </p>
         <h1 className="font-display text-3xl font-semibold text-slate-50">Verify magic link</h1>
         <p className="text-sm text-slate-300">
           Complete verification to unlock the live board, analytics, and runbooks.
@@ -105,7 +107,9 @@ const AuthVerifyPageComponent: FC = () => {
             validators={{
               onBlur: ({ value }) => {
                 const parsed = tokenSchema.safeParse(value);
-                return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? "Invalid token");
+                return parsed.success
+                  ? undefined
+                  : (parsed.error.issues[0]?.message ?? "Invalid token");
               }
             }}
           >

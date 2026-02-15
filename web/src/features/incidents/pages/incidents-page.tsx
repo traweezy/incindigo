@@ -18,10 +18,7 @@ import { useIncidentStream } from "@/features/incidents/hooks/use-incident-strea
 import { useIncidentsQuery } from "@/features/incidents/hooks/use-incidents-query";
 import { useResolveIncident } from "@/features/incidents/hooks/use-resolve-incident";
 import { useSeedIncidents } from "@/features/incidents/hooks/use-seed-incidents";
-import type {
-  Incident,
-  IncidentSeverity
-} from "@/features/incidents/schemas/incident-schemas";
+import type { Incident, IncidentSeverity } from "@/features/incidents/schemas/incident-schemas";
 import { runbookMatchesIncident } from "@/features/runbooks/lib/runbook-match";
 import { useRunbooksQuery } from "@/features/runbooks/hooks/use-runbooks-query";
 import { Badge } from "@/shared/components/primitives/badge";
@@ -290,7 +287,9 @@ const IncidentsPageComponent: FC = () => {
             <div className="flex items-center justify-between border-t border-slate-800 pt-2">
               <p className="text-xs text-slate-500">Last event</p>
               <p className="text-xs text-slate-300">
-                {stream.lastEventAt ? new Date(stream.lastEventAt).toLocaleTimeString() : "No events yet"}
+                {stream.lastEventAt
+                  ? new Date(stream.lastEventAt).toLocaleTimeString()
+                  : "No events yet"}
               </p>
             </div>
           </Card>
@@ -331,7 +330,8 @@ const IncidentsPageComponent: FC = () => {
               Filters
             </div>
             <p className="text-xs text-slate-400">
-              Showing <span className="font-semibold text-slate-200">{filteredIncidents.length}</span> of{" "}
+              Showing{" "}
+              <span className="font-semibold text-slate-200">{filteredIncidents.length}</span> of{" "}
               <span className="font-semibold text-slate-200">{counts.total}</span>
             </p>
 
@@ -411,13 +411,15 @@ const IncidentsPageComponent: FC = () => {
             filteredIncidents.length === 0 ? (
               <Card className="border-dashed text-center">
                 <ListChecks className="mx-auto mb-3 size-6 text-slate-400" />
-                <p className="mb-3 text-sm text-slate-300">No incidents matched the current filters.</p>
+                <p className="mb-3 text-sm text-slate-300">
+                  No incidents matched the current filters.
+                </p>
                 <Button variant="secondary" size="sm" onClick={clearFilters}>
                   Clear Filters
                 </Button>
               </Card>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 min-[1700px]:grid-cols-4">
+              <div className="grid gap-4 min-[1700px]:grid-cols-4 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
                 {filteredIncidents.map((incident) => {
                   return (
                     <IncidentCard
@@ -446,7 +448,8 @@ const IncidentsPageComponent: FC = () => {
             <Card className="border-emerald-400/20 bg-emerald-950/10">
               <p className="inline-flex items-center gap-2 text-sm text-emerald-200">
                 <CheckCircle2 className="size-4" />
-                Closed incidents (resolved/cancelled) stay queryable and visible in historical filters.
+                Closed incidents (resolved/cancelled) stay queryable and visible in historical
+                filters.
               </p>
             </Card>
           ) : null}

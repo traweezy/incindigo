@@ -37,7 +37,10 @@ export const createRunbook = async (input: CreateRunbookInput): Promise<Runbook>
   return parsed.runbook;
 };
 
-export const updateRunbook = async (runbookID: string, input: UpdateRunbookInput): Promise<Runbook> => {
+export const updateRunbook = async (
+  runbookID: string,
+  input: UpdateRunbookInput
+): Promise<Runbook> => {
   const request = updateRunbookInputSchema.parse(input);
   const payload = await fetchJson<unknown>(toAPIURL(`/api/v1/runbooks/${runbookID}`), {
     body: JSON.stringify(request),

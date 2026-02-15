@@ -119,7 +119,7 @@ const IncidentDetailDialogComponent: FC<IncidentDetailDialogProps> = ({
 
   return (
     <Dialog open={Boolean(incident)} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-h-[calc(100vh-1.5rem)] max-w-5xl overflow-hidden p-0">
+      <DialogContent className="max-h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-5xl overflow-hidden p-0">
         <div className="max-h-[calc(100vh-1.5rem)] space-y-4 overflow-y-auto p-4 sm:p-6">
           <header className="space-y-3">
             <DialogTitle className="font-display text-xl font-semibold text-indigo-100">
@@ -170,7 +170,9 @@ const IncidentDetailDialogComponent: FC<IncidentDetailDialogProps> = ({
               </div>
 
               <div className="space-y-1">
-                <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">Last Updated</p>
+                <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">
+                  Last Updated
+                </p>
                 <p className="inline-flex items-center gap-1.5 text-slate-200">
                   <Clock3 className="size-3.5 text-slate-400" />
                   {new Date(incident.updated_at).toLocaleString()}
@@ -178,7 +180,9 @@ const IncidentDetailDialogComponent: FC<IncidentDetailDialogProps> = ({
               </div>
 
               <div className="sm:col-span-2">
-                <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">Fingerprint</p>
+                <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">
+                  Fingerprint
+                </p>
                 <p className="mt-1 inline-flex w-full items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 font-mono text-xs text-slate-200">
                   <Fingerprint className="size-3.5 text-slate-500" />
                   <span className="truncate">{incident.fingerprint}</span>
@@ -186,7 +190,9 @@ const IncidentDetailDialogComponent: FC<IncidentDetailDialogProps> = ({
               </div>
 
               <div className="sm:col-span-2">
-                <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">Reported By</p>
+                <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">
+                  Reported By
+                </p>
                 <div className="mt-1 flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2">
                   <span className="grid size-8 shrink-0 place-items-center rounded-full border border-slate-700 bg-slate-900 text-xs font-semibold text-slate-100">
                     {reporterInitials}
@@ -211,7 +217,7 @@ const IncidentDetailDialogComponent: FC<IncidentDetailDialogProps> = ({
               ) : null}
 
               {incident.status === "cancelled" ? (
-                <div className="sm:col-span-2 space-y-1">
+                <div className="space-y-1 sm:col-span-2">
                   <p className="text-[11px] tracking-[0.12em] text-slate-500 uppercase">
                     Cancellation
                   </p>

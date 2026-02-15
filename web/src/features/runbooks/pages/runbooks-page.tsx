@@ -1,6 +1,14 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BookOpenText, ClipboardCheck, Pencil, PlusCircle, Sparkles, Trash2, X } from "lucide-react";
+import {
+  BookOpenText,
+  ClipboardCheck,
+  Pencil,
+  PlusCircle,
+  Sparkles,
+  Trash2,
+  X
+} from "lucide-react";
 import {
   memo,
   useCallback,
@@ -85,33 +93,35 @@ const defaultRunbookValues: RunbookFormValues = {
   }
 };
 
-const sampleRunbookTemplates: readonly RunbookFormValues[] = incidentEventTypes.map((eventType, index) => {
-  const source = incidentSources[index % incidentSources.length] ?? "manual-demo";
-  const service = incidentServices[index % incidentServices.length] ?? "api";
-  const severity = incidentSeverities[index % incidentSeverities.length] ?? "high";
-  const fingerprintHint = eventType.split(".")[0] ?? eventType;
-  const includeSource = index % 2 === 0;
-  const includeService = index % 3 !== 0;
-  const includeFingerprint = index % 2 === 1;
+const sampleRunbookTemplates: readonly RunbookFormValues[] = incidentEventTypes.map(
+  (eventType, index) => {
+    const source = incidentSources[index % incidentSources.length] ?? "manual-demo";
+    const service = incidentServices[index % incidentServices.length] ?? "api";
+    const severity = incidentSeverities[index % incidentSeverities.length] ?? "high";
+    const fingerprintHint = eventType.split(".")[0] ?? eventType;
+    const includeSource = index % 2 === 0;
+    const includeService = index % 3 !== 0;
+    const includeFingerprint = index % 2 === 1;
 
-  return {
-    name: `${eventType} ${severity.toUpperCase()} Response`,
-    description: `Targeted triage playbook for ${severity} ${eventType} alerts.`,
-    checklist: [
-      `Confirm ${eventType} scope and impacted surface`,
-      `Check ${service} health and alert corroboration`,
-      "Apply mitigation and verify stability over 10 minutes",
-      "Post status update with owner and next checkpoint"
-    ],
-    match: {
-      source: includeSource ? source : "",
-      event_type: eventType,
-      service: includeService ? service : "",
-      severity,
-      fingerprint_contains: includeFingerprint ? fingerprintHint : ""
-    }
-  };
-});
+    return {
+      name: `${eventType} ${severity.toUpperCase()} Response`,
+      description: `Targeted triage playbook for ${severity} ${eventType} alerts.`,
+      checklist: [
+        `Confirm ${eventType} scope and impacted surface`,
+        `Check ${service} health and alert corroboration`,
+        "Apply mitigation and verify stability over 10 minutes",
+        "Post status update with owner and next checkpoint"
+      ],
+      match: {
+        source: includeSource ? source : "",
+        event_type: eventType,
+        service: includeService ? service : "",
+        severity,
+        fingerprint_contains: includeFingerprint ? fingerprintHint : ""
+      }
+    };
+  }
+);
 
 const normalizeMatch = (input: RunbookFormValues["match"]): CreateRunbookInput["match"] => {
   return {
@@ -137,7 +147,11 @@ const RunbooksPageComponent: FC = () => {
   const runbooksForIncidentQuery = useRunbooksForIncidentQuery(incidentID);
   const createRunbookMutation = useCreateRunbook();
 
-  const updateRunbookMutation = useMutation<Runbook, Error, { input: UpdateRunbookInput; runbookID: string }>({
+  const updateRunbookMutation = useMutation<
+    Runbook,
+    Error,
+    { input: UpdateRunbookInput; runbookID: string }
+  >({
     mutationFn: async ({ input, runbookID }) => updateRunbook(runbookID, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: runbookQueryKey });
@@ -287,7 +301,9 @@ const RunbooksPageComponent: FC = () => {
       if (incidentID) {
         await queryClient.invalidateQueries({ queryKey: ["runbooks", "incident", incidentID] });
       }
-      toast.success(`Loaded ${missingSamples.length} sample runbook${missingSamples.length === 1 ? "" : "s"}.`);
+      toast.success(
+        `Loaded ${missingSamples.length} sample runbook${missingSamples.length === 1 ? "" : "s"}.`
+      );
     } catch {
       toast.error("Failed to load sample runbooks.");
     } finally {
@@ -310,7 +326,10 @@ const RunbooksPageComponent: FC = () => {
       setChecklistDraft("");
       setChecklistDraftError(undefined);
       form.reset();
-      form.setFieldValue("checklist", runbook.checklist.map((item) => item.title));
+      form.setFieldValue(
+        "checklist",
+        runbook.checklist.map((item) => item.title)
+      );
       form.setFieldValue("description", runbook.description);
       form.setFieldValue("name", runbook.name);
       form.setFieldValue("match", {
@@ -345,7 +364,9 @@ const RunbooksPageComponent: FC = () => {
   return (
     <section className="space-y-6">
       <Card className="space-y-3 border-indigo-300/40 bg-gradient-to-r from-indigo-950/65 via-slate-900 to-slate-900">
-        <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">Operational Playbooks</p>
+        <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">
+          Operational Playbooks
+        </p>
         <h1 className="font-display text-3xl font-semibold text-slate-50 sm:text-4xl">Runbooks</h1>
         <p className="max-w-3xl text-sm text-slate-300 sm:text-base">
           Define runbooks with incident match rules so responders can discover the right checklist
@@ -359,11 +380,7 @@ const RunbooksPageComponent: FC = () => {
             <p className="text-sm font-semibold text-emerald-200">
               Showing runbooks matched to incident {incidentID}
             </p>
-            <Button
-              size="sm"
-              variant="secondary"
-              asChild
-            >
+            <Button size="sm" variant="secondary" asChild>
               <Link
                 to="/runbooks"
                 onClick={(event) => {
@@ -427,7 +444,9 @@ const RunbooksPageComponent: FC = () => {
               validators={{
                 onBlur: ({ value }) => {
                   const parsed = runbookSchema.shape.name.safeParse(value);
-                  return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? "Invalid value");
+                  return parsed.success
+                    ? undefined
+                    : (parsed.error.issues[0]?.message ?? "Invalid value");
                 }
               }}
             >
@@ -452,7 +471,9 @@ const RunbooksPageComponent: FC = () => {
               validators={{
                 onBlur: ({ value }) => {
                   const parsed = runbookSchema.shape.description.safeParse(value);
-                  return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? "Invalid value");
+                  return parsed.success
+                    ? undefined
+                    : (parsed.error.issues[0]?.message ?? "Invalid value");
                 }
               }}
             >
@@ -507,7 +528,10 @@ const RunbooksPageComponent: FC = () => {
                           className="focus:border-brand-300 focus:ring-brand-400/40 h-10 w-full rounded-lg border border-slate-700 bg-slate-900/80 px-3 text-sm text-slate-100 transition outline-none focus:ring-2"
                           value={field.state.value.event_type}
                           onChange={(event) =>
-                            field.handleChange({ ...field.state.value, event_type: event.target.value })
+                            field.handleChange({
+                              ...field.state.value,
+                              event_type: event.target.value
+                            })
                           }
                         >
                           <option value="">Any event type</option>
@@ -524,7 +548,10 @@ const RunbooksPageComponent: FC = () => {
                           className="focus:border-brand-300 focus:ring-brand-400/40 h-10 w-full rounded-lg border border-slate-700 bg-slate-900/80 px-3 text-sm text-slate-100 transition outline-none focus:ring-2"
                           value={field.state.value.service}
                           onChange={(event) =>
-                            field.handleChange({ ...field.state.value, service: event.target.value })
+                            field.handleChange({
+                              ...field.state.value,
+                              service: event.target.value
+                            })
                           }
                         >
                           <option value="">Any service</option>
@@ -541,7 +568,10 @@ const RunbooksPageComponent: FC = () => {
                           className="focus:border-brand-300 focus:ring-brand-400/40 h-10 w-full rounded-lg border border-slate-700 bg-slate-900/80 px-3 text-sm text-slate-100 transition outline-none focus:ring-2"
                           value={field.state.value.severity}
                           onChange={(event) =>
-                            field.handleChange({ ...field.state.value, severity: event.target.value })
+                            field.handleChange({
+                              ...field.state.value,
+                              severity: event.target.value
+                            })
                           }
                         >
                           <option value="">Any severity</option>
@@ -579,7 +609,9 @@ const RunbooksPageComponent: FC = () => {
               validators={{
                 onBlur: ({ value }) => {
                   const parsed = runbookSchema.shape.checklist.safeParse(value);
-                  return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? "Invalid value");
+                  return parsed.success
+                    ? undefined
+                    : (parsed.error.issues[0]?.message ?? "Invalid value");
                 }
               }}
             >
@@ -607,7 +639,11 @@ const RunbooksPageComponent: FC = () => {
                             }
                           }}
                           onKeyDown={(event) =>
-                            handleChecklistInputKeyDown(event, field.state.value, field.handleChange)
+                            handleChecklistInputKeyDown(
+                              event,
+                              field.state.value,
+                              field.handleChange
+                            )
                           }
                         />
                         <Button
@@ -641,7 +677,9 @@ const RunbooksPageComponent: FC = () => {
                                 type="button"
                                 className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900/60 p-1 text-slate-300 transition hover:border-rose-400 hover:text-rose-200"
                                 aria-label={`Remove checklist step ${index + 1}`}
-                                onClick={() => removeChecklistStep(index, field.state.value, field.handleChange)}
+                                onClick={() =>
+                                  removeChecklistStep(index, field.state.value, field.handleChange)
+                                }
                               >
                                 <X className="size-3.5" />
                               </button>
@@ -726,7 +764,9 @@ const RunbooksPageComponent: FC = () => {
                     <Badge tone="neutral">source {formatMatchValue(runbook.match.source)}</Badge>
                     <Badge tone="neutral">event {formatMatchValue(runbook.match.event_type)}</Badge>
                     <Badge tone="neutral">service {formatMatchValue(runbook.match.service)}</Badge>
-                    <Badge tone="neutral">severity {formatMatchValue(runbook.match.severity)}</Badge>
+                    <Badge tone="neutral">
+                      severity {formatMatchValue(runbook.match.severity)}
+                    </Badge>
                   </div>
 
                   <ul className="space-y-1 text-xs text-slate-300">
@@ -741,7 +781,9 @@ const RunbooksPageComponent: FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-400">No runbooks created yet. Use Load Samples to populate this view.</p>
+            <p className="text-sm text-slate-400">
+              No runbooks created yet. Use Load Samples to populate this view.
+            </p>
           )}
         </Card>
       </div>

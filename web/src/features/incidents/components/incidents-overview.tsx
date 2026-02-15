@@ -10,7 +10,11 @@ type IncidentsOverviewProps = {
   isError: boolean;
 };
 
-const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({ overview, isPending, isError }) => {
+const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({
+  overview,
+  isPending,
+  isError
+}) => {
   const maxActivity = useMemo(() => {
     if (!overview || overview.recent_activity.length === 0) {
       return 1;
@@ -49,7 +53,9 @@ const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({ overview, isPe
     <Card className="space-y-5 border-slate-700/90 bg-slate-900/70">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-xs tracking-[0.18em] text-slate-400 uppercase">Operations Snapshot</p>
+          <p className="font-mono text-xs tracking-[0.18em] text-slate-400 uppercase">
+            Operations Snapshot
+          </p>
           <h2 className="mt-1 inline-flex items-center gap-2 text-lg font-semibold text-slate-100">
             <BarChart3 className="size-4" />
             Server-computed incident analytics
@@ -75,7 +81,9 @@ const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({ overview, isPe
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
           <p className="text-xs text-slate-400">Resolved in 30m</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-50">{overview.resolution.resolved_within_30m}</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-50">
+            {overview.resolution.resolved_within_30m}
+          </p>
         </div>
       </div>
 
@@ -93,7 +101,10 @@ const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({ overview, isPe
               return (
                 <div key={bucket.bucket_start} className="flex flex-col items-center gap-1">
                   <div className="flex h-24 w-full max-w-4 items-end rounded-full bg-slate-900/80 p-[2px]">
-                    <div className="w-full rounded-full bg-sky-400/70" style={{ height: `${createdHeight}px` }} />
+                    <div
+                      className="w-full rounded-full bg-sky-400/70"
+                      style={{ height: `${createdHeight}px` }}
+                    />
                   </div>
                   <div className="flex h-20 w-full max-w-4 items-end rounded-full bg-slate-900/80 p-[2px]">
                     <div
@@ -117,7 +128,10 @@ const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({ overview, isPe
             <div className="space-y-2">
               {overview.top_sources.slice(0, 4).map((source) => {
                 return (
-                  <div key={source.source} className="flex items-center justify-between gap-3 text-sm">
+                  <div
+                    key={source.source}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
                     <span className="truncate text-slate-200">{source.source}</span>
                     <div className="inline-flex items-center gap-1.5">
                       <Badge tone="neutral">{source.total} total</Badge>
@@ -144,7 +158,9 @@ const IncidentsOverviewComponent: FC<IncidentsOverviewProps> = ({ overview, isPe
                     <span className="truncate text-slate-200">{eventType.event_type}</span>
                     <div className="inline-flex items-center gap-1.5">
                       <Badge tone="neutral">{eventType.total} total</Badge>
-                      <Badge tone={eventType.open > 0 ? "high" : "low"}>{eventType.open} open</Badge>
+                      <Badge tone={eventType.open > 0 ? "high" : "low"}>
+                        {eventType.open} open
+                      </Badge>
                     </div>
                   </div>
                 );

@@ -10,7 +10,9 @@ type LiveActivityFeedProps = {
   lastEventAt?: string | null;
 };
 
-const eventTone = (eventType: TimelineEvent["event_type"]): "critical" | "high" | "medium" | "low" => {
+const eventTone = (
+  eventType: TimelineEvent["event_type"]
+): "critical" | "high" | "medium" | "low" => {
   switch (eventType) {
     case "resolved":
     case "auto_resolved":
@@ -102,7 +104,9 @@ const LiveActivityFeedComponent: FC<LiveActivityFeedProps> = ({
       </div>
 
       {displayEvents.length === 0 ? (
-        <p className="text-sm text-slate-400">No stream events yet. Create or resolve incidents to populate this feed.</p>
+        <p className="text-sm text-slate-400">
+          No stream events yet. Create or resolve incidents to populate this feed.
+        </p>
       ) : (
         <div className="space-y-2">
           {displayEvents.map((event, index) => {
@@ -113,7 +117,9 @@ const LiveActivityFeedComponent: FC<LiveActivityFeedProps> = ({
                 className="flex items-start justify-between gap-3 rounded-lg border border-slate-700 bg-slate-950/50 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-200">{event.incident.summary}</p>
+                  <p className="truncate text-sm font-medium text-slate-200">
+                    {event.incident.summary}
+                  </p>
                   <p className="truncate text-xs text-slate-400">
                     {event.incident.source} | {event.incident.event_type}
                   </p>
@@ -125,7 +131,9 @@ const LiveActivityFeedComponent: FC<LiveActivityFeedProps> = ({
                       {eventLabel(event.event_type)}
                     </span>
                   </Badge>
-                  <span className="text-xs text-slate-400">{new Date(event.occurred_at).toLocaleTimeString()}</span>
+                  <span className="text-xs text-slate-400">
+                    {new Date(event.occurred_at).toLocaleTimeString()}
+                  </span>
                 </div>
               </div>
             );

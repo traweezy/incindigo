@@ -62,7 +62,9 @@ const AnalyticsPageComponent: FC = () => {
     <section className="space-y-6">
       <Card className="overflow-hidden border-indigo-300/40 bg-gradient-to-r from-indigo-950/65 via-slate-900 to-slate-900">
         <div className="space-y-3">
-          <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">Go Analytics Surface</p>
+          <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">
+            Go Analytics Surface
+          </p>
           <h1 className="font-display text-3xl font-semibold text-slate-50 sm:text-4xl">
             Incident Analytics
           </h1>
@@ -131,7 +133,9 @@ const AnalyticsPageComponent: FC = () => {
                       {incident.status}
                     </p>
                   </div>
-                  <p className="line-clamp-2 text-sm font-medium text-slate-100">{incident.summary}</p>
+                  <p className="line-clamp-2 text-sm font-medium text-slate-100">
+                    {incident.summary}
+                  </p>
                   <p className="truncate text-xs text-slate-400">
                     {incident.source} | {incident.event_type}
                   </p>

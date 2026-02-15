@@ -321,9 +321,14 @@ test("cancels incidents and surfaces cancellation metadata", async ({ page }) =>
   await page.goto("/");
   await expect(page.getByText("Database latency crossed 500ms")).toBeVisible();
 
-  await page.getByRole("button", { name: /^Cancel$/ }).first().click();
+  await page
+    .getByRole("button", { name: /^Cancel$/ })
+    .first()
+    .click();
   await expect(page.getByRole("heading", { name: "Cancel Incident" })).toBeVisible();
-  await page.getByPlaceholder("False positive, duplicate alert, invalid monitor...").fill("False positive alert");
+  await page
+    .getByPlaceholder("False positive, duplicate alert, invalid monitor...")
+    .fill("False positive alert");
   await page.getByRole("button", { name: "Cancel Incident" }).click();
 
   await expect(page.getByText("Incident cancelled")).toBeVisible();

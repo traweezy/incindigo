@@ -13,9 +13,7 @@ import {
   incidentSeverities,
   incidentSources
 } from "@/features/incidents/lib/incident-taxonomy";
-import type {
-  CreateIncidentInput,
-} from "@/features/incidents/schemas/incident-schemas";
+import type { CreateIncidentInput } from "@/features/incidents/schemas/incident-schemas";
 
 const buildSeedInput = (index: number, seed: number): CreateIncidentInput => {
   const source = incidentSources[index % incidentSources.length] ?? "manual-demo";

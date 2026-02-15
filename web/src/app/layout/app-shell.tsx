@@ -1,10 +1,22 @@
 import { ActivitySquare, BarChart3, BookCopy, LogOut, PlusCircle, UserRound } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type FC, type MouseEvent as ReactMouseEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FC,
+  type MouseEvent as ReactMouseEvent
+} from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearAuthSession, useAuthSession } from "@/features/auth/lib/auth-session";
 import { CreateIncidentForm } from "@/features/incidents/components/create-incident-form";
 import { useCreateIncident } from "@/features/incidents/hooks/use-create-incident";
-import type { CreateIncidentInput, CreateIncidentResponse } from "@/features/incidents/schemas/incident-schemas";
+import type {
+  CreateIncidentInput,
+  CreateIncidentResponse
+} from "@/features/incidents/schemas/incident-schemas";
 import {
   Dialog,
   DialogContent,

@@ -68,7 +68,10 @@ export const resolveIncident = async (incidentID: string): Promise<Incident> => 
   return parsed.incident;
 };
 
-export const cancelIncident = async (incidentID: string, input: CancelIncidentInput): Promise<Incident> => {
+export const cancelIncident = async (
+  incidentID: string,
+  input: CancelIncidentInput
+): Promise<Incident> => {
   const request = cancelIncidentInputSchema.parse(input);
   const payload = await fetchJson<unknown>(toAPIURL(`/api/v1/incidents/${incidentID}/cancel`), {
     method: "POST",

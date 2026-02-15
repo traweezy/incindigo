@@ -8,4 +8,3 @@ export const useRunbooksQuery = () => {
     refetchInterval: 30_000
   });
 };
-

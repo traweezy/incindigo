@@ -182,13 +182,13 @@ func scanTemplate(row pgx.CollectableRow) (domain.Template, error) {
 
 func scanTemplateRow(row interface{ Scan(dest ...any) error }) (domain.Template, error) {
 	var (
-		template                  domain.Template
-		checklistJSON             []byte
-		matchSource               sql.NullString
-		matchEventType            sql.NullString
-		matchService              sql.NullString
-		matchSeverity             sql.NullString
-		matchFingerprintContains  sql.NullString
+		template                 domain.Template
+		checklistJSON            []byte
+		matchSource              sql.NullString
+		matchEventType           sql.NullString
+		matchService             sql.NullString
+		matchSeverity            sql.NullString
+		matchFingerprintContains sql.NullString
 	)
 
 	if err := row.Scan(

@@ -87,13 +87,19 @@ const IncidentCardComponent: FC<IncidentCardProps> = ({
         : "bg-sky-400";
 
   return (
-    <Card className={`relative flex h-full flex-col gap-3 overflow-hidden border bg-slate-900/90 transition hover:border-slate-500 ${severitySurfaceClass}`}>
+    <Card
+      className={`relative flex h-full flex-col gap-3 overflow-hidden border bg-slate-900/90 transition hover:border-slate-500 ${severitySurfaceClass}`}
+    >
       <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-1 ${severityAccentClass}`} />
       <div className="flex items-center justify-between gap-3">
-        <p className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase ${severityBadgeClass}`}>
+        <p
+          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] uppercase ${severityBadgeClass}`}
+        >
           {incident.severity}
         </p>
-        <p className={`inline-flex items-center gap-1.5 text-xs font-semibold capitalize ${statusClass}`}>
+        <p
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold capitalize ${statusClass}`}
+        >
           <span aria-hidden="true" className={`size-2 rounded-full ${statusDotClass}`} />
           {incident.status === "resolved" ? <CheckCircle2 className="size-3.5" /> : null}
           {incident.status === "cancelled" ? <XCircle className="size-3.5" /> : null}
@@ -102,7 +108,9 @@ const IncidentCardComponent: FC<IncidentCardProps> = ({
       </div>
 
       <div className="space-y-1">
-        <h3 className="line-clamp-2 text-[15px] leading-5 font-semibold text-slate-100">{incident.summary}</h3>
+        <h3 className="line-clamp-2 text-[15px] leading-5 font-semibold text-slate-100">
+          {incident.summary}
+        </h3>
         <p className="inline-flex items-center gap-2 text-[11px] tracking-[0.16em] text-slate-400 uppercase">
           <Radar className="size-3.5" />
           {incident.source} • {incident.event_type}
@@ -137,29 +145,29 @@ const IncidentCardComponent: FC<IncidentCardProps> = ({
         </div>
 
         <div className="flex items-center justify-end gap-1.5">
-            {incident.status === "open" ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={isResolving}
-                onClick={() => onResolve(incident.id)}
-              >
-                {isResolving ? "Resolving..." : "Resolve"}
-              </Button>
-            ) : null}
-            {incident.status === "open" ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={isCancelling}
-                onClick={() => onCancel(incident.id)}
-              >
-                {isCancelling ? "Cancelling..." : "Cancel"}
-              </Button>
-            ) : null}
-            <Button variant="secondary" size="sm" onClick={() => onInspect(incident)}>
-              Inspect
+          {incident.status === "open" ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isResolving}
+              onClick={() => onResolve(incident.id)}
+            >
+              {isResolving ? "Resolving..." : "Resolve"}
             </Button>
+          ) : null}
+          {incident.status === "open" ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isCancelling}
+              onClick={() => onCancel(incident.id)}
+            >
+              {isCancelling ? "Cancelling..." : "Cancel"}
+            </Button>
+          ) : null}
+          <Button variant="secondary" size="sm" onClick={() => onInspect(incident)}>
+            Inspect
+          </Button>
         </div>
       </div>
     </Card>

@@ -64,7 +64,7 @@ func TestListReturnsRepositoryValues(t *testing.T) {
 
 func TestCreatePropagatesError(t *testing.T) {
 	repo := &runbookRepoMock{
-		listFunc: func(context.Context) ([]domain.Template, error) { return nil, nil },
+		listFunc:            func(context.Context) ([]domain.Template, error) { return nil, nil },
 		listForIncidentFunc: func(context.Context, uuid.UUID) ([]domain.Template, error) { return nil, nil },
 		createFunc: func(context.Context, domain.Template) (domain.Template, error) {
 			return domain.Template{}, errors.New("insert failed")

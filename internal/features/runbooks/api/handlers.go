@@ -22,9 +22,9 @@ type Handler struct {
 }
 
 type createRunbookRequest struct {
-	Name        string   `json:"name" validate:"required,max=150"`
-	Description string   `json:"description" validate:"required,max=500"`
-	Checklist   []string `json:"checklist" validate:"required,min=1,dive,required,max=180"`
+	Name        string              `json:"name" validate:"required,max=150"`
+	Description string              `json:"description" validate:"required,max=500"`
+	Checklist   []string            `json:"checklist" validate:"required,min=1,dive,required,max=180"`
 	Match       runbookMatchRequest `json:"match"`
 }
 

@@ -53,11 +53,11 @@ type Overview struct {
 }
 
 type OverviewCounts struct {
-	Total    int64          `json:"total"`
-	Open     int64          `json:"open"`
-	Resolved int64          `json:"resolved"`
-	Cancelled int64         `json:"cancelled"`
-	Severity SeverityCounts `json:"severity"`
+	Total     int64          `json:"total"`
+	Open      int64          `json:"open"`
+	Resolved  int64          `json:"resolved"`
+	Cancelled int64          `json:"cancelled"`
+	Severity  SeverityCounts `json:"severity"`
 }
 
 type SeverityCounts struct {

@@ -63,8 +63,12 @@ const AuthPageComponent: FC = () => {
   return (
     <section className="mx-auto w-full max-w-xl space-y-6 py-8">
       <Card className="space-y-3 border-indigo-300/40 bg-gradient-to-r from-indigo-950/65 via-slate-900 to-slate-900">
-        <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">Authentication</p>
-        <h1 className="font-display text-3xl font-semibold text-slate-50">Sign in with magic link</h1>
+        <p className="font-mono text-xs tracking-[0.2em] text-indigo-300 uppercase">
+          Authentication
+        </p>
+        <h1 className="font-display text-3xl font-semibold text-slate-50">
+          Sign in with magic link
+        </h1>
         <p className="text-sm text-slate-300">
           Enter your email and verify with the generated link to access the incident command deck.
         </p>
@@ -77,7 +81,9 @@ const AuthPageComponent: FC = () => {
             validators={{
               onBlur: ({ value }) => {
                 const parsed = authFormSchema.shape.email.safeParse(value);
-                return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? "Invalid email");
+                return parsed.success
+                  ? undefined
+                  : (parsed.error.issues[0]?.message ?? "Invalid email");
               }
             }}
           >
@@ -109,7 +115,7 @@ const AuthPageComponent: FC = () => {
         {previewLink ? (
           <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/50 p-3">
             <p className="text-xs font-medium text-slate-200">Magic link preview (local/dev)</p>
-            <p className="break-all text-xs text-slate-400">{previewLink}</p>
+            <p className="text-xs break-all text-slate-400">{previewLink}</p>
             <div className="flex flex-wrap gap-2">
               <Button asChild size="sm">
                 <Link to={verifyPath ?? "/auth/verify"}>

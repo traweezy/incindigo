@@ -25,4 +25,3 @@ export const redirectAuthedLoader = ({ request }: LoaderFunctionArgs) => {
 
   return redirect("/");
 };
-
