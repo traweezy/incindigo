@@ -19,8 +19,9 @@ const getStorage = (): StorageLike | null => {
     return null;
   }
 
-  const storage = window.localStorage as Partial<StorageLike>;
+  const storage = window.localStorage as Partial<StorageLike> | undefined;
   if (
+    !storage ||
     typeof storage.getItem !== "function" ||
     typeof storage.setItem !== "function" ||
     typeof storage.removeItem !== "function"
